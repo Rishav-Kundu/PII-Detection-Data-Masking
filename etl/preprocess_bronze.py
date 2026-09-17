@@ -24,6 +24,11 @@ from validators import (
 # DATABASE HELPERS
 # ============================================================
 
+def is_empty(value):
+    """Check if value is None, NaN, or pd.NA."""
+    return value is None or pd.isna(value)
+
+
 ALLOWED_TABLES = {
     "banking",
     "education",
@@ -125,57 +130,6 @@ def process_banking(conn):
 
     df["address"] = df["address"].apply(clean_text)
 
-    # ----------------------------
-    # VALIDATION
-    # ----------------------------
-
-    valid_rows = []
-    rejected_rows = []
-
-    for _, row in df.iterrows():
-
-        valid = True
-
-        if row["customer_id"] is None:
-            valid = False
-
-        if row["first_name"] is None:
-            valid = False
-
-        if row["last_name"] is None:
-            valid = False
-
-        if row["email"] is None or not is_valid_email(row["email"]):
-            valid = False
-
-        if row["phone"] is None or not is_valid_phone(row["phone"]):
-            valid = False
-
-        if row["account_number"] is None:
-            valid = False
-
-        if row["account_type"] not in {
-            "SAVINGS",
-            "CURRENT",
-            "SALARY",
-            "FIXED_DEPOSIT",
-        }:
-            valid = False
-
-        if row["balance"] is None or row["balance"] < 0:
-            valid = False
-
-        if valid:
-            valid_rows.append(tuple(row))
-        else:
-            rejected_rows.append(tuple(row))
-
-    # ----------------------------
-    # LOAD
-    # ----------------------------
-
-    clear_silver_table(conn, "banking")
-
     columns = [
         "customer_id",
         "first_name",
@@ -188,6 +142,59 @@ def process_banking(conn):
         "balance",
         "address",
     ]
+
+    # ----------------------------
+    # VALIDATION
+    # ----------------------------
+
+    valid_rows = []
+    rejected_rows = []
+
+    for _, row in df.iterrows():
+
+        valid = True
+
+        if is_empty(row["customer_id"]):
+            valid = False
+
+        if is_empty(row["first_name"]):
+            valid = False
+
+        if is_empty(row["last_name"]):
+            valid = False
+
+        if is_empty(row["email"]) or not is_valid_email(row["email"]):
+            valid = False
+
+        if is_empty(row["phone"]) or not is_valid_phone(row["phone"]):
+            valid = False
+
+        if is_empty(row["account_number"]):
+            valid = False
+
+        if row["account_type"] not in {
+            "SAVINGS",
+            "CURRENT",
+            "SALARY",
+            "FIXED_DEPOSIT",
+        }:
+            valid = False
+
+        if is_empty(row["balance"]) or row["balance"] < 0:
+            valid = False
+
+        row_tuple = tuple(row[col] for col in columns)
+
+        if valid:
+            valid_rows.append(row_tuple)
+        else:
+            rejected_rows.append(row_tuple)
+
+    # ----------------------------
+    # LOAD
+    # ----------------------------
+
+    clear_silver_table(conn, "banking")
 
     inserted = insert_into_silver(
         conn,
@@ -242,56 +249,6 @@ def process_education(conn):
 
     df["percentage"] = df["percentage"].apply(clean_percentage)
 
-    # ----------------------------
-    # VALIDATION
-    # ----------------------------
-
-    valid_rows = []
-    rejected_rows = []
-
-    for _, row in df.iterrows():
-
-        valid = True
-
-        if row["student_id"] is None:
-            valid = False
-
-        if row["first_name"] is None:
-            valid = False
-
-        if row["last_name"] is None:
-            valid = False
-
-        if row["email"] is None or not is_valid_email(row["email"]):
-            valid = False
-
-        if row["phone"] is None or not is_valid_phone(row["phone"]):
-            valid = False
-
-        if row["course"] is None:
-            valid = False
-
-        if row["department"] is None:
-            valid = False
-
-        if row["enrollment_date"] is None:
-            valid = False
-
-        if row["percentage"] is not None:
-            if not valid_percentage(row["percentage"]):
-                valid = False
-
-        if valid:
-            valid_rows.append(tuple(row))
-        else:
-            rejected_rows.append(tuple(row))
-
-    # ----------------------------
-    # LOAD
-    # ----------------------------
-
-    clear_silver_table(conn, "education")
-
     columns = [
         "student_id",
         "first_name",
@@ -305,6 +262,58 @@ def process_education(conn):
         "enrollment_date",
         "percentage",
     ]
+
+    # ----------------------------
+    # VALIDATION
+    # ----------------------------
+
+    valid_rows = []
+    rejected_rows = []
+
+    for _, row in df.iterrows():
+
+        valid = True
+
+        if is_empty(row["student_id"]):
+            valid = False
+
+        if is_empty(row["first_name"]):
+            valid = False
+
+        if is_empty(row["last_name"]):
+            valid = False
+
+        if is_empty(row["email"]) or not is_valid_email(row["email"]):
+            valid = False
+
+        if is_empty(row["phone"]) or not is_valid_phone(row["phone"]):
+            valid = False
+
+        if is_empty(row["course"]):
+            valid = False
+
+        if is_empty(row["department"]):
+            valid = False
+
+        if is_empty(row["enrollment_date"]):
+            valid = False
+
+        if not is_empty(row["percentage"]):
+            if not valid_percentage(row["percentage"]):
+                valid = False
+
+        row_tuple = tuple(row[col] for col in columns)
+
+        if valid:
+            valid_rows.append(row_tuple)
+        else:
+            rejected_rows.append(row_tuple)
+
+    # ----------------------------
+    # LOAD
+    # ----------------------------
+
+    clear_silver_table(conn, "education")
 
     inserted = insert_into_silver(
         conn,
@@ -363,50 +372,6 @@ def process_medical(conn):
         df["medical_record_number"].apply(clean_text)
     )
 
-    # ----------------------------
-    # VALIDATION
-    # ----------------------------
-
-    valid_rows = []
-    rejected_rows = []
-
-    for _, row in df.iterrows():
-
-        valid = True
-
-        if row["patient_id"] is None:
-            valid = False
-
-        if row["first_name"] is None:
-            valid = False
-
-        if row["last_name"] is None:
-            valid = False
-
-        if row["email"] is None or not is_valid_email(row["email"]):
-            valid = False
-
-        if row["phone"] is None or not is_valid_phone(row["phone"]):
-            valid = False
-
-        if row["blood_group"] is not None:
-            if not is_valid_blood_group(row["blood_group"]):
-                valid = False
-
-        if row["medical_record_number"] is None:
-            valid = False
-
-        if valid:
-            valid_rows.append(tuple(row))
-        else:
-            rejected_rows.append(tuple(row))
-
-    # ----------------------------
-    # LOAD
-    # ----------------------------
-
-    clear_silver_table(conn, "medical")
-
     columns = [
         "patient_id",
         "first_name",
@@ -421,6 +386,52 @@ def process_medical(conn):
         "admission_date",
         "medical_record_number",
     ]
+
+    # ----------------------------
+    # VALIDATION
+    # ----------------------------
+
+    valid_rows = []
+    rejected_rows = []
+
+    for _, row in df.iterrows():
+
+        valid = True
+
+        if is_empty(row["patient_id"]):
+            valid = False
+
+        if is_empty(row["first_name"]):
+            valid = False
+
+        if is_empty(row["last_name"]):
+            valid = False
+
+        if is_empty(row["email"]) or not is_valid_email(row["email"]):
+            valid = False
+
+        if is_empty(row["phone"]) or not is_valid_phone(row["phone"]):
+            valid = False
+
+        if not is_empty(row["blood_group"]):
+            if not is_valid_blood_group(row["blood_group"]):
+                valid = False
+
+        if is_empty(row["medical_record_number"]):
+            valid = False
+
+        row_tuple = tuple(row[col] for col in columns)
+
+        if valid:
+            valid_rows.append(row_tuple)
+        else:
+            rejected_rows.append(row_tuple)
+
+    # ----------------------------
+    # LOAD
+    # ----------------------------
+
+    clear_silver_table(conn, "medical")
 
     inserted = insert_into_silver(
         conn,
@@ -476,61 +487,6 @@ def process_marketing(conn):
 
     df["channel"] = df["channel"].apply(clean_text)
 
-    # ----------------------------
-    # VALIDATION
-    # ----------------------------
-
-    valid_rows = []
-    rejected_rows = []
-
-    for _, row in df.iterrows():
-
-        valid = True
-
-        if row["customer_id"] is None:
-            valid = False
-
-        if row["first_name"] is None:
-            valid = False
-
-        if row["last_name"] is None:
-            valid = False
-
-        if row["email"] is None or not is_valid_email(row["email"]):
-            valid = False
-
-        if row["phone"] is None or not is_valid_phone(row["phone"]):
-            valid = False
-
-        if row["age"] is not None:
-            if not valid_age(row["age"]):
-                valid = False
-
-        if row["gender"] is not None:
-            if row["gender"] not in {
-                "MALE",
-                "FEMALE",
-                "OTHER",
-            }:
-                valid = False
-
-        if row["campaign_name"] is None:
-            valid = False
-
-        if row["channel"] is None:
-            valid = False
-
-        if valid:
-            valid_rows.append(tuple(row))
-        else:
-            rejected_rows.append(tuple(row))
-
-    # ----------------------------
-    # LOAD
-    # ----------------------------
-
-    clear_silver_table(conn, "marketing")
-
     columns = [
         "customer_id",
         "first_name",
@@ -544,6 +500,63 @@ def process_marketing(conn):
         "campaign_date",
         "channel",
     ]
+
+    # ----------------------------
+    # VALIDATION
+    # ----------------------------
+
+    valid_rows = []
+    rejected_rows = []
+
+    for _, row in df.iterrows():
+
+        valid = True
+
+        if is_empty(row["customer_id"]):
+            valid = False
+
+        if is_empty(row["first_name"]):
+            valid = False
+
+        if is_empty(row["last_name"]):
+            valid = False
+
+        if is_empty(row["email"]) or not is_valid_email(row["email"]):
+            valid = False
+
+        if is_empty(row["phone"]) or not is_valid_phone(row["phone"]):
+            valid = False
+
+        if not is_empty(row["age"]):
+            if not valid_age(row["age"]):
+                valid = False
+
+        if not is_empty(row["gender"]):
+            if row["gender"] not in {
+                "MALE",
+                "FEMALE",
+                "OTHER",
+            }:
+                valid = False
+
+        if is_empty(row["campaign_name"]):
+            valid = False
+
+        if is_empty(row["channel"]):
+            valid = False
+
+        row_tuple = tuple(row[col] for col in columns)
+
+        if valid:
+            valid_rows.append(row_tuple)
+        else:
+            rejected_rows.append(row_tuple)
+
+    # ----------------------------
+    # LOAD
+    # ----------------------------
+
+    clear_silver_table(conn, "marketing")
 
     inserted = insert_into_silver(
         conn,
