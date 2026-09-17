@@ -79,6 +79,9 @@ This project provides an automated pipeline for:
                     └──────────┬──────────┘
                                │
                                ▼
+                    ┌─────────────────────┐
+                    │ Dashboard & Reports │
+                    └─────────────────────┘
 
 🎯 Objectives
 
@@ -559,6 +562,3 @@ GitHub Repository:
 https://github.com/Rishav-Kundu/PII-Detection-Data-Masking
 
 Disclaimer: This project is a hackathon prototype intended for demonstration, development, and educational purposes. It should not be considered a production-ready compliance system without additional security, validation, monitoring, and governance controls.
-                    ┌─────────────────────┐
-                    │ Dashboard & Reports │
-                    └─────────────────────┘
