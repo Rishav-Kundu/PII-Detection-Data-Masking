@@ -1,7 +1,7 @@
 import pandas as pd
-from psycopg2.extras import execute_batch
+from sqlalchemy import text
 
-from db import get_connection
+from db import engine
 from validators import (
     clean_text,
     clean_email,
@@ -16,7 +16,7 @@ from validators import (
     is_valid_phone,
     valid_percentage,
     valid_age,
-    is_valid_blood_group
+    is_valid_blood_group,
 )
 
 
@@ -24,59 +24,67 @@ from validators import (
 # DATABASE HELPERS
 # ============================================================
 
+ALLOWED_TABLES = {
+    "banking",
+    "education",
+    "medical",
+    "marketing",
+}
+
+
+def validate_table_name(table_name):
+    """Allow only the four internal ETL table names."""
+    if table_name not in ALLOWED_TABLES:
+        raise ValueError(f"Invalid table name: {table_name}")
+
+
 def read_bronze_table(conn, table_name):
     """
-    Read a Bronze table into a Pandas DataFrame.
+    Read a Bronze table into a Pandas DataFrame using SQLAlchemy.
     """
+    validate_table_name(table_name)
 
-    query = f"SELECT * FROM bronze.{table_name}"
-
+    query = text(f"SELECT * FROM bronze.{table_name}")
     return pd.read_sql_query(query, conn)
 
 
 def clear_silver_table(conn, table_name):
     """
-    Clear the corresponding Silver table before loading.
+    Clear the corresponding Silver table.
 
-    This makes the ETL repeatable and prevents duplicate rows
-    when we run the script again.
+    This runs inside the transaction controlled by main().
     """
+    validate_table_name(table_name)
 
-    with conn.cursor() as cursor:
-        cursor.execute(f"TRUNCATE TABLE silver.{table_name}")
-
-    conn.commit()
+    conn.execute(text(f"TRUNCATE TABLE silver.{table_name}"))
 
 
 def insert_into_silver(conn, table_name, columns, rows):
     """
-    Batch insert processed rows into a Silver table.
+    Load processed rows into an existing Silver table using
+    Pandas + SQLAlchemy.
+
+    The Silver table is NOT recreated. Its existing PostgreSQL
+    types, constraints, primary keys and checks remain intact.
     """
+    validate_table_name(table_name)
 
     if not rows:
         return 0
 
-    column_string = ", ".join(columns)
+    df = pd.DataFrame(rows, columns=columns)
 
-    placeholders = ", ".join(["%s"] * len(columns))
+    df.to_sql(
+        name=table_name,
+        con=conn,
+        schema="silver",
+        if_exists="append",
+        index=False,
+        method="multi",
+        chunksize=1000,
+    )
 
-    query = f"""
-        INSERT INTO silver.{table_name}
-        ({column_string})
-        VALUES ({placeholders})
-    """
-
-    with conn.cursor() as cursor:
-        execute_batch(
-            cursor,
-            query,
-            rows,
-            page_size=100
-        )
-
-    conn.commit()
-
-    return len(rows)
+    return len(df)
 
 
 # ============================================================
@@ -128,7 +136,6 @@ def process_banking(conn):
 
         valid = True
 
-        # Required fields
         if row["customer_id"] is None:
             valid = False
 
@@ -151,7 +158,7 @@ def process_banking(conn):
             "SAVINGS",
             "CURRENT",
             "SALARY",
-            "FIXED_DEPOSIT"
+            "FIXED_DEPOSIT",
         }:
             valid = False
 
@@ -179,14 +186,14 @@ def process_banking(conn):
         "account_number",
         "account_type",
         "balance",
-        "address"
+        "address",
     ]
 
     inserted = insert_into_silver(
         conn,
         "banking",
         columns,
-        valid_rows
+        valid_rows,
     )
 
     print(f"Valid records: {len(valid_rows)}")
@@ -296,14 +303,14 @@ def process_education(conn):
         "course",
         "department",
         "enrollment_date",
-        "percentage"
+        "percentage",
     ]
 
     inserted = insert_into_silver(
         conn,
         "education",
         columns,
-        valid_rows
+        valid_rows,
     )
 
     print(f"Valid records: {len(valid_rows)}")
@@ -353,8 +360,7 @@ def process_medical(conn):
     df["admission_date"] = df["admission_date"].apply(clean_date)
 
     df["medical_record_number"] = (
-        df["medical_record_number"]
-        .apply(clean_text)
+        df["medical_record_number"].apply(clean_text)
     )
 
     # ----------------------------
@@ -413,14 +419,14 @@ def process_medical(conn):
         "diagnosis",
         "doctor_name",
         "admission_date",
-        "medical_record_number"
+        "medical_record_number",
     ]
 
     inserted = insert_into_silver(
         conn,
         "medical",
         columns,
-        valid_rows
+        valid_rows,
     )
 
     print(f"Valid records: {len(valid_rows)}")
@@ -504,7 +510,7 @@ def process_marketing(conn):
             if row["gender"] not in {
                 "MALE",
                 "FEMALE",
-                "OTHER"
+                "OTHER",
             }:
                 valid = False
 
@@ -536,14 +542,14 @@ def process_marketing(conn):
         "gender",
         "campaign_name",
         "campaign_date",
-        "channel"
+        "channel",
     ]
 
     inserted = insert_into_silver(
         conn,
         "marketing",
         columns,
-        valid_rows
+        valid_rows,
     )
 
     print(f"Valid records: {len(valid_rows)}")
@@ -564,31 +570,29 @@ def main():
     print("        BRONZE → SILVER ETL PIPELINE")
     print("=" * 60)
 
-    conn = None
-
     try:
+        # engine.begin() gives us one SQLAlchemy transaction.
+        # If anything fails, all Silver changes are rolled back.
+        with engine.begin() as conn:
 
-        # --------------------------------
-        # CONNECT TO SUPABASE
-        # --------------------------------
+            print("\nConnected to Supabase PostgreSQL!")
 
-        conn = get_connection()
+            # --------------------------------
+            # PROCESS ALL DOMAINS
+            # --------------------------------
 
-        print("\nConnected to Supabase PostgreSQL!")
+            results = {}
 
-        # --------------------------------
-        # PROCESS ALL DOMAINS
-        # --------------------------------
+            results["banking"] = process_banking(conn)
 
-        results = {}
+            results["education"] = process_education(conn)
 
-        results["banking"] = process_banking(conn)
+            results["medical"] = process_medical(conn)
 
-        results["education"] = process_education(conn)
+            results["marketing"] = process_marketing(conn)
 
-        results["medical"] = process_medical(conn)
-
-        results["marketing"] = process_marketing(conn)
+        # The transaction is committed here only if every domain
+        # completed successfully.
 
         # --------------------------------
         # FINAL SUMMARY
@@ -627,23 +631,10 @@ def main():
 
     except Exception as e:
 
-        if conn:
-            conn.rollback()
-
         print("\nETL PIPELINE FAILED!")
         print("Error:")
         print(e)
 
-    finally:
-
-        if conn:
-            conn.close()
-            print("\nDatabase connection closed.")
-
-
-# ============================================================
-# PROGRAM ENTRY POINT
-# ============================================================
 
 if __name__ == "__main__":
     main()
