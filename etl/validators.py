@@ -48,7 +48,7 @@ def is_valid_email(email):
     Validate a basic email format.
     """
 
-    if email is None:
+    if email is None or pd.isna(email) or not isinstance(email, str):
         return False
 
     pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
@@ -71,6 +71,7 @@ def clean_phone(phone):
         +919876543210
         +91 9876543210
         98765 43210
+        917000205965
 
     Output:
 
@@ -89,6 +90,10 @@ def clean_phone(phone):
     if phone.startswith("+91"):
         phone = phone[3:]
 
+    # Remove leading 91 from a 12-digit Indian number (e.g. if parsed without +)
+    elif phone.startswith("91") and len(phone) == 12:
+        phone = phone[2:]
+
     # Remove leading 0 from an 11-digit Indian number
     elif phone.startswith("0") and len(phone) == 11:
         phone = phone[1:]
@@ -105,7 +110,7 @@ def is_valid_phone(phone):
     Validate standardized Indian 10-digit mobile number.
     """
 
-    if phone is None:
+    if phone is None or pd.isna(phone) or not isinstance(phone, str):
         return False
 
     return bool(re.fullmatch(r"[6-9]\d{9}", phone))
@@ -130,6 +135,16 @@ def clean_date(value):
     DD/MM/YYYY and similar DD-first formats are used
     for the Indian datasets in this project.
     """
+
+    if value is None or pd.isna(value):
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    from datetime import date
+    if isinstance(value, date):
+        return value
 
     value = clean_text(value)
 
@@ -215,7 +230,7 @@ def clean_percentage(value):
 
     Example:
 
-        "87.50" -> 87.50
+        "87.50%" -> 87.50
     """
 
     value = clean_text(value)
@@ -257,10 +272,13 @@ def valid_percentage(value):
     Percentage must be between 0 and 100.
     """
 
-    if value is None:
+    if value is None or pd.isna(value):
         return False
 
-    return 0 <= value <= 100
+    try:
+        return 0 <= float(value) <= 100
+    except (ValueError, TypeError):
+        return False
 
 
 def valid_age(value):
@@ -268,10 +286,13 @@ def valid_age(value):
     Age must be between 0 and 120.
     """
 
-    if value is None:
+    if value is None or pd.isna(value):
         return False
 
-    return 0 <= value <= 120
+    try:
+        return 0 <= int(value) <= 120
+    except (ValueError, TypeError):
+        return False
 
 
 # ============================================================
@@ -307,5 +328,8 @@ def is_valid_blood_group(value):
     """
     Check whether blood group is valid.
     """
+
+    if value is None or pd.isna(value) or not isinstance(value, str):
+        return False
 
     return value in VALID_BLOOD_GROUPS
