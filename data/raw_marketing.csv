@@ -1,0 +1,26 @@
+customer_id,first_name,last_name,email,phone,address,age,gender,campaign_name,campaign_date,channel
+5001,Ananya,Gupta,ananya.gupta51@testmail.in,7000837591,"101, Park Street, Mumbai",19,FEMALE,New Customer,18/01/2025,SOCIAL
+5002,Diya,Mehta,diya.mehta52@example.com,7000851322,"102, MG Road, Delhi",20,OTHER,Festive Offer,31/01/2025,SEARCH
+5003,Priya,Patel,PRIYA.PATEL53@SAMPLEMAIL.COM,7000865053,"103, College Road, Pune",21,MALE,Loyalty Drive,13/02/2025,REFERRAL
+5004,Sneha,Kumar,sneha.kumar54@demo.org,7000878784,"104, Station Road, Bengaluru",22,FEMALE,Product Launch,26/02/2025,SMS
+5005,Isha,Banerjee,isha.banerjee55@testmail.in,7000892515,"105, Lake Road, Chennai",23,OTHER,Summer Sale,11/03/2025,EMAIL
+5006,Meera,Chatterjee,meera.chatterjee56@example.com,7000906246,"106, Park Street, Hyderabad",24,MALE,New Customer,24/03/2025,SOCIAL
+5007,Riya,Mukherjee,riya.mukherjee57@samplemail.com,7000919977,"107, MG Road, Jaipur",25,FEMALE,Festive Offer,06/04/2025,SEARCH
+5008,Nisha,Singh,nisha.singh58@demo.org,+917000933708,"108, College Road, Lucknow",26,OTHER,Loyalty Drive,19/04/2025,REFERRAL
+5009,Kavya,Verma,kavya.verma59@testmail.in,7000947439,"109, Station Road, Bhubaneswar",27,MALE,Product Launch,02/05/2025,SMS
+5010,Pooja,Nair,pooja.nair60@example.com,7000961170,"110, Lake Road, Kolkata",28,FEMALE,Summer Sale,15/05/2025,EMAIL
+5011,Neha,Iyer,neha.iyer61@samplemail.com,7000974901,"111, Park Street, Mumbai",29,OTHER,New Customer,28/05/2025,SOCIAL
+5012,Tanya,Ghosh,tanya.ghosh62@demo.org,7000988632,"112, MG Road, Delhi",30,MALE,Festive Offer,10/06/2025,SEARCH
+5013,  Kavya,Bose,aditi.bose63@testmail.in,7001002363,"113, College Road, Pune",31,FEMALE,Loyalty Drive,23/06/2025,REFERRAL
+5014,Maya,Dutta,maya.dutta64@example.com,7001016094,"114, Station Road, Bengaluru",32,OTHER,Product Launch,06/07/2025,SMS
+5015,Sana,Saha,sana.saha65@samplemail.com,7001029825,"115, Lake Road, Chennai",33,MALE,Summer Sale,19/07/2025,EMAIL
+5016,Aarav,Jain,aarav.jain66@demo.org,7001043556,"116, Park Street, Hyderabad",34,FEMALE,New Customer,01/08/2025,SOCIAL
+5017,Vivaan,Malhotra,vivaan.malhotra67@testmail.in,7001057287,"117, MG Road, Jaipur",35,OTHER,Festive Offer,14/08/2025,SEARCH
+5018,Aditya,Kapoor,aditya.kapoor68@example.com,7001071018,"118, College Road, Lucknow",36,MALE, Festive Offer ,27/08/2025,REFERRAL
+5019,Arjun,Mishra,arjun.mishra69@samplemail.com,7001084749,"119, Station Road, Bhubaneswar",37,FEMALE,Product Launch,09/09/2025,SMS
+5020,Rohan,Reddy,rohan.reddy70@demo.org,7001098480,"120, Lake Road, Kolkata",38,OTHER,Summer Sale,22/09/2025,EMAIL
+5021,Kabir,Ahmed,kabir.ahmed71@testmail.in,7001112211,"121, Park Street, Mumbai",39,MALE,New Customer,05/10/2025,SOCIAL
+5022,Ishaan,Sharma,ishaan.sharma72@example.com,7001125942,"122, MG Road, Delhi", 29 ,FEMALE,Festive Offer,18/10/2025,SEARCH
+5023,Rahul,Das,rahul.das73@samplemail.com,7001139673,"123, College Road, Pune",41,OTHER,Loyalty Drive,31/10/2025,REFERRAL
+5024,Amit,Roy,amit.roy74@demo.org,7001153404,"124, Station Road, Bengaluru",42,MALE,Product Launch,13/11/2025,SMS
+5025,Karan,Sen,karan.sen75@testmail.in,7001167135,"125, Lake Road, Chennai",18,FEMALE,Summer Sale,26/11/2025,EMAIL

@@ -1,0 +1,26 @@
+patient_id,first_name,last_name,email,phone,date_of_birth,address,blood_group,diagnosis,doctor_name,admission_date,medical_record_number
+3001,Aarav Sharma,Sharma,aarav.med@example.com,9876400001,15/01/1989,"12 MG Road, Kolkata",B+,Diabetes,Dr. Sen,10/01/2025,MRN3001
+3002,Priya Sen,Sen,priya.med@example.com,9876400002,22/07/1990,"45 Park Street, Kolkata",O+,Hypertension,Dr. Roy,11/01/2025,MRN3002
+3003,Rohan Das,Das,rohan.med.example.com,9876400003,31/02/1988,"10 Lake Road, Kolkata",A+,Fever,Dr. Das,12/01/2025,MRN3003
+3004,,Roy,meera.med@example.com,9876400004,10/05/1992,"8 Salt Lake, Kolkata",AB+,Migraine,Dr. Paul,13/01/2025,MRN3004
+3005,Kabir Khan,Khan,kabir.med@example.com,9876400005,03/11/1985,"22 MG Road, Mumbai",Z+,Diabetes,Dr. Khan,14/01/2025,MRN3005
+3006,Ananya Bose,Bose,ananya.med@example.com,,14/09/1991,"15 Park Street, Kolkata",A-,Asthma,Dr. Bose,15/01/2025,MRN3006
+3007,Vikram Ghosh,Ghosh,vikram.med@example.com,9876400007,2099-12-01,"7 Brigade Road, Bengaluru",O-,Infection,Dr. Rao,16/01/2025,MRN3007
+3008,Ishita Paul,Paul,ishita.med@example.com,9876400008,12/12/1987,"18 Banjara Hills, Hyderabad",,Migraine,Dr. Paul,17/01/2025,MRN3008
+3009,Arjun Roy,Roy,arjun.med@example.com,9876400009,01/02/1986,"20 FC Road, Pune",B+,???,Dr. Roy,18/01/2025,MRN3009
+3010,Neha Gupta,Gupta,neha.med@example.com,9876400010,18/08/1984,"30 Civil Lines, Jaipur",O+,Diabetes,12345,19/01/2025,MRN3010
+3011,Siddharth Jain,Jain,siddharth.med@example.com,9876400011,05/06/1990,"9 MG Road, Bengaluru",B-,Asthma,Dr. Jain,32/01/2025,MRN3011
+3012,Riya Mukherjee,Mukherjee,riya.med@example.com,9876400012,,"14 Park Street, Kolkata",AB-,Cancer,Dr. Mukherjee,21/01/2025,MRN3012
+3013,Aman Verma,Verma,aman.med@example.com,9876400013,11/03/1983,"5 Civil Lines, Delhi",A+,Fever,,22/01/2025,MRN3013
+3014,Tanya Singh,Singh,tanya.med@example.com,9876400014,01/01/1993,"11 MG Road, Pune",O+,Asthma,Dr. Singh,,MRN3014
+3015,Dev Patel,Patel,dev.med@example.com,9876400015,31/12/1989,"9 CG Road, Ahmedabad",A+,Diabetes,Dr. Patel,24/01/2025,MRN3015
+3015,Dev Patel,Patel,dev.med@example.com,9876400015,31/12/1989,"9 CG Road, Ahmedabad",A+,Diabetes,Dr. Patel,24/01/2025,MRN3015
+3017,Sara Ali,Ali,sara.med@example.com,9876400017,15/10/1991,"21 Residency Road, Bengaluru",B+,Hypertension,Dr. Ali,26/01/2025,MRN3017
+3018,Rahul Nair,Nair,rahul.med@example.com,9876400018,25/12/1988,"3 MG Road, Bengaluru",O-,Fever,Dr. Nair,27/01/2025,MRN3018
+3019,Pooja Iyer,Iyer,pooja.med@example.com,9876400019,08/02/1990,"6 Anna Salai, Chennai",AB+,Asthma,Dr. Iyer,28/01/2025,MRN3019
+3020,Karan Malhotra,Malhotra,karan.med@example.com,9876400020,17/07/1987,"9 Sector 17, Chandigarh",B+,Migraine,Dr. Malhotra,29/01/2025,MRN3020
+3021,Nisha Kapoor,Kapoor,nisha.med@example.com,9876400021,12/11/1992,"4 Connaught Place, Delhi",A+,Diabetes,Dr. Kapoor,30/01/2025,MRN3021
+3022,Vivek Rao,Rao,vivek.med@example.com,9876400022,09/09/1986,"2 Banjara Hills, Hyderabad",B-,Fever,Dr. Rao,31/01/2025,MRN3022
+3023,Maya Roy,Roy,maya.med@example.com,9876400023,06/06/1994,"17 Park Street, Kolkata",O+,Asthma,Dr. Roy,01/02/2025,MRN3023
+3024,Aditi Sen,Sen,aditi.med@example.com,9876400024,20/02/1991,"13 MG Road, Kolkata",AB-,Diabetes,Dr. Sen,02/02/2025,MRN3024
+3025,Aditi Sen,Sen,aditi.med@example.com,9876400024,20/02/1991,"13 MG Road, Kolkata",AB-,Diabetes,Dr. Sen,02/02/2025,MRN3024

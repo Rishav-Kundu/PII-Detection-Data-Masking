@@ -1,0 +1,26 @@
+student_id,first_name,last_name,email,phone,date_of_birth,address,course,department,enrollment_date,percentage
+1001,Kabir,Banerjee,kabir.banerjee1@samplemail.com,7000425661,04/06/1986,"101, Park Street, Mumbai",B.Tech IT,Information Technology,18/07/2021,73.57
+1002,Ishaan,Chatterjee,ishaan.chatterjee2@demo.org,7000439392,24/11/1986,"102, MG Road, Delhi",BBA,Business Administration,03/09/2021,74.64
+1003,Rahul,Mukherjee,rahul.mukherjee3@testmail.in,7000453123,16/05/1987,"103, College Road, Pune",BCA,Data Science,20/10/2021,75.71
+1004, Priya ,Singh,amit.singh4@example.com,7000466854,05/11/1987,"104, Station Road, Bengaluru",M.Tech CSE,Computer Science,06/12/2021,76.78
+1005,Karan,Verma,karan.verma5@samplemail.com,7000480585,26/04/1988,"105, Lake Road, Chennai",B.Tech CSE,Information Technology,22/01/2022,77.85
+1006,Ananya,Nair,ananya.nair6@demo.org,7000494316,16/10/1988,"106, Park Street, Hyderabad",B.Tech IT,Business Administration,10/03/2022,78.92
+1007,Diya,Iyer,diya.iyer7@testmail.in,7000508047,07/04/1989,"107, MG Road, Jaipur",BBA,Data Science,26/04/2022,79.99
+1008,Priya,Ghosh,priya.ghosh8@example.com,7000521778,27/09/1989,"108, College Road, Lucknow",BCA,Computer Science,12/06/2022,81.06
+1009,Sneha,Bose,SNEHA.BOSE9@SAMPLEMAIL.COM,7000535509,19/03/1990,"109, Station Road, Bhubaneswar",M.Tech CSE,Information Technology,29/07/2022,82.13
+1010,Isha,Dutta,isha.dutta10@demo.org,7000549240,08/09/1990,"110, Lake Road, Kolkata",B.Tech CSE,Business Administration,14/09/2022,83.20
+1011,Meera,Saha,meera.saha11@testmail.in,7000562971,28/02/1991,"111, Park Street, Mumbai",B.Tech IT,Data Science,31/10/2022,84.27
+1012,Riya,Jain,riya.jain12@example.com,7000576702,20/08/1991,"112, MG Road, Delhi",BBA,Computer Science,17/12/2022,85.34
+1013,Nisha,Malhotra,nisha.malhotra13@samplemail.com,7000590433,09/02/1992,"113, College Road, Pune",BCA,Information Technology,02/02/2023,86.41
+1014,Kavya,Kapoor,kavya.kapoor14@demo.org,07000604164,31/07/1992,"114, Station Road, Bengaluru",M.Tech CSE,Business Administration,21/03/2023,87.48
+1015,Pooja,Mishra,pooja.mishra15@testmail.in,7000617895,20/01/1993,"115, Lake Road, Chennai",B.Tech CSE,Data Science,07/05/2023,88.55
+1016,Neha,Reddy,neha.reddy16@example.com,7000631626,12/07/1993,"116, Park Street, Hyderabad",B.Tech IT,Computer Science,23/06/2023,89.62
+1017,Tanya,Ahmed,tanya.ahmed17@samplemail.com,7000645357,01/01/1994,"117, MG Road, Jaipur",BBA,Information Technology,09/08/2023,90.69
+1018,Aditi,Sharma,aditi.sharma18@demo.org,7000659088,23/06/1994,"118, College Road, Lucknow",BCA,Business Administration,25/09/2023,91.76
+1019,Maya,Das,maya.das19@testmail.in,7000672819,13/12/1994,"119, Station Road, Bhubaneswar",M.Tech CSE,Data Science,11/11/2023, 81.50 
+1020,Sana,Roy,sana.roy20@example.com,7000686550,04/06/1995,"120, Lake Road, Kolkata",B.Tech CSE,Computer Science,28/12/2023,93.90
+1021,Aarav,Sen,aarav.sen21@samplemail.com,7000700281,24/11/1995,"121, Park Street, Mumbai",B.Tech IT,Information Technology,13/02/2024,94.97
+1022,Vivaan,Gupta,vivaan.gupta22@demo.org,7000714012,15/05/1996,"122, MG Road, Delhi",BBA,Business Administration,31/03/2024,96.04
+1023,Aditya,Mehta,aditya.mehta23@testmail.in,7000727743,04/11/1996,"123, College Road, Pune ",BCA,Data Science,17/05/2024,97.11
+1024,Arjun,Patel,arjun.patel24@example.com,7000741474,26/04/1997,"124, Station Road, Bengaluru",M.Tech CSE,Computer Science,03/07/2024,73.18
+1025,Rohan,Kumar,rohan.kumar25@samplemail.com,7000755205,16/10/1997,"125, Lake Road, Chennai",B.Tech CSE,Information Technology,19/08/2024,74.25

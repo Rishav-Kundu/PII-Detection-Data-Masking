@@ -1,519 +1,739 @@
+from __future__ import annotations
+
 import os
+import re
 import uuid
-import hashlib
-import json
+from datetime import datetime, timezone
+from pathlib import Path
+
 import pandas as pd
-from sqlalchemy import text, inspect
-from db import engine
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
 
-# Map CSV file paths to their corresponding Bronze table names
-CSV_MAPPING = {
-    "banking": "data/raw_banking.csv",
-    "education": "data/raw_education.csv",
-    "medical": "data/raw_medical.csv",
-    "marketing": "data/raw_marketing.csv",
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = BASE_DIR / "data"
+INCOMING_DIR = DATA_DIR / "incoming"
+
+load_dotenv(BASE_DIR / ".env")
+
+
+# ============================================================
+# DATABASE CONNECTION
+# ============================================================
+
+DATABASE_URL = (
+    os.getenv("DATABASE_URL")
+    or os.getenv("SUPABASE_DB_URL")
+    or os.getenv("POSTGRES_URL")
+)
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        "Database connection string not found.\n"
+        "Set DATABASE_URL in your .env file."
+    )
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+)
+
+
+# ============================================================
+# EXPECTED DOMAIN COLUMNS
+# ============================================================
+
+DOMAIN_REQUIRED_COLUMNS = {
+    "banking": {
+        "customer_id",
+        "account_number",
+        "account_type",
+        "balance",
+    },
+    "education": {
+        "student_id",
+        "course",
+        "department",
+        "enrollment_date",
+        "percentage",
+    },
+    "medical": {
+        "patient_id",
+        "diagnosis",
+        "doctor_name",
+        "admission_date",
+        "medical_record_number",
+    },
+    "marketing": {
+        "customer_id",
+        "campaign_name",
+        "campaign_date",
+        "channel",
+    },
 }
 
 
-def ensure_bronze_schema(conn):
-    """Ensure the Bronze schema exists in PostgreSQL."""
-    conn.execute(
-        text("CREATE SCHEMA IF NOT EXISTS bronze;")
-    )
+# ============================================================
+# BRONZE SOURCE COLUMN DEFINITIONS
+# ============================================================
+
+DOMAIN_SOURCE_COLUMNS = {
+    "banking": [
+        "customer_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "date_of_birth",
+        "account_number",
+        "account_type",
+        "balance",
+        "address",
+    ],
+    "education": [
+        "student_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "date_of_birth",
+        "address",
+        "course",
+        "department",
+        "enrollment_date",
+        "percentage",
+    ],
+    "medical": [
+        "patient_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "date_of_birth",
+        "address",
+        "blood_group",
+        "diagnosis",
+        "doctor_name",
+        "admission_date",
+        "medical_record_number",
+    ],
+    "marketing": [
+        "customer_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "address",
+        "age",
+        "gender",
+        "campaign_name",
+        "campaign_date",
+        "channel",
+    ],
+}
 
 
-def bronze_table_exists(conn, table_name):
-    """Check whether a table already exists in the Bronze schema."""
-    inspector = inspect(conn)
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
 
-    return inspector.has_table(
-        table_name,
-        schema="bronze"
-    )
-
-
-def generate_row_hash(row):
+def normalize_column_name(column: str) -> str:
     """
-    Generate a deterministic SHA-256 hash for a source row.
+    Convert a CSV column name into a consistent database-style name.
 
-    The hash is based only on the source columns and their values.
-    Bronze ingestion metadata is added later and is therefore not
-    included in the hash.
-
-    Column names are sorted so that the hash does not depend on
-    DataFrame column order.
+    Examples:
+        'Customer ID'      -> 'customer_id'
+        'customer-id'     -> 'customer_id'
+        ' First Name '    -> 'first_name'
     """
 
-    canonical_data = {}
+    column = str(column).strip().lower()
 
-    for column in sorted(row.index):
-        value = row[column]
+    column = re.sub(r"[^a-z0-9]+", "_", column)
 
-        # Normalize missing values
-        if pd.isna(value):
-            value = None
-        else:
-            value = str(value)
+    column = re.sub(r"_+", "_", column)
 
-        canonical_data[column] = value
-
-    # Convert to a deterministic JSON representation
-    row_string = json.dumps(
-        canonical_data,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False
-    )
-
-    return hashlib.sha256(
-        row_string.encode("utf-8")
-    ).hexdigest()
+    return column.strip("_")
 
 
-def prepare_dataframe(df, file_path, batch_id):
+def normalize_dataframe_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Prepare a DataFrame for Bronze ingestion.
-
-    Adds ingestion metadata:
-        _row_hash
-        _source_file
-        _ingestion_batch_id
-        _ingested_at
+    Normalize all CSV column names.
     """
 
-    # Strip whitespace from column headers
+    df = df.copy()
+
     df.columns = [
-        c.strip().lower()
-        for c in df.columns
+        normalize_column_name(column)
+        for column in df.columns
     ]
-
-    # Generate a hash for every source row
-    df["_row_hash"] = df.apply(
-        generate_row_hash,
-        axis=1
-    )
-
-    # Add ingestion metadata
-    df["_source_file"] = os.path.basename(file_path)
-    df["_ingestion_batch_id"] = batch_id
-    df["_ingested_at"] = pd.Timestamp.now()
 
     return df
 
 
-def ensure_bronze_metadata_columns(conn, table_name):
+def detect_domain(columns: set[str]) -> str:
     """
-    Add Bronze ingestion metadata columns to an existing table
-    if they do not already exist.
+    Determine which domain a CSV belongs to based on its columns.
+
+    This does NOT inspect or validate row values.
+    It only looks at the CSV structure.
     """
 
-    inspector = inspect(conn)
+    matches = []
 
-    existing_columns = {
-        column["name"]
-        for column in inspector.get_columns(
-            table_name,
-            schema="bronze"
+    for domain, required_columns in DOMAIN_REQUIRED_COLUMNS.items():
+
+        if required_columns.issubset(columns):
+            matches.append(domain)
+
+    if len(matches) == 1:
+        return matches[0]
+
+    if len(matches) == 0:
+        raise ValueError(
+            "Could not determine the domain from the CSV columns.\n"
+            f"Available columns: {sorted(columns)}"
         )
-    }
 
-    metadata_columns = {
-        "_row_hash": "VARCHAR(64)",
-        "_source_file": "VARCHAR(255)",
-        "_ingestion_batch_id": "UUID",
-        "_ingested_at": "TIMESTAMP",
-    }
-
-    for column_name, column_type in metadata_columns.items():
-
-        if column_name not in existing_columns:
-
-            conn.execute(
-                text(
-                    f"""
-                    ALTER TABLE bronze.{table_name}
-                    ADD COLUMN {column_name} {column_type};
-                    """
-                )
-            )
+    raise ValueError(
+        "CSV matches multiple domains.\n"
+        f"Possible domains: {matches}\n"
+        f"Columns: {sorted(columns)}"
+    )
 
 
-def ensure_row_hash_constraint(conn, table_name):
+def prepare_dataframe(
+    df: pd.DataFrame,
+    domain: str,
+) -> pd.DataFrame:
     """
-    Create a unique constraint on _row_hash.
+    Prepare the raw dataframe for Bronze.
 
-    This provides database-level protection against
-    inserting the exact same row twice.
+    IMPORTANT:
+    This function performs NO business/data validation.
+
+    Missing columns are added as NULL so that Bronze can still
+    receive the raw record structure.
+
+    Extra columns are ignored because the current Bronze schemas
+    contain the defined domain columns plus technical metadata.
     """
 
-    constraint_name = f"{table_name}_row_hash_key"
+    source_columns = DOMAIN_SOURCE_COLUMNS[domain]
+
+    df = df.copy()
+
+    # Make sure all expected source columns exist.
+    # Missing columns become NULL.
+    for column in source_columns:
+
+        if column not in df.columns:
+            df[column] = None
+
+    # Keep only columns supported by the Bronze schema.
+    df = df[source_columns].copy()
+
+    return df
+
+
+def get_file_signature(file_path: Path) -> str:
+    """
+    Create a stable identifier for the current file.
+
+    We use:
+        filename + file size + last modified time
+
+    This prevents accidentally loading the exact same local file
+    repeatedly while still allowing a changed/new version of a file
+    to be ingested later.
+    """
+
+    stat = file_path.stat()
+
+    return (
+        f"{file_path.name}|"
+        f"{stat.st_size}|"
+        f"{stat.st_mtime_ns}"
+    )
+
+
+# ============================================================
+# INGESTION MANIFEST
+# ============================================================
+
+def ensure_manifest_table(conn) -> None:
+    """
+    Create a small Bronze metadata table used to track files that
+    have already been ingested.
+
+    This is NOT a business-data table.
+
+    It only prevents accidental duplicate ingestion of the same
+    physical file.
+    """
 
     conn.execute(
         text(
-            f"""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT 1
-                    FROM pg_constraint
-                    WHERE conname = :constraint_name
-                ) THEN
-                    ALTER TABLE bronze.{table_name}
-                    ADD CONSTRAINT {constraint_name}
-                    UNIQUE (_row_hash);
-                END IF;
-            END $$;
             """
-        ),
-        {"constraint_name": constraint_name}
+            CREATE TABLE IF NOT EXISTS bronze._ingestion_manifest (
+                manifest_id BIGSERIAL PRIMARY KEY,
+                source_file TEXT NOT NULL,
+                file_signature TEXT NOT NULL UNIQUE,
+                domain TEXT NOT NULL,
+                ingestion_batch_id UUID NOT NULL,
+                ingested_at TIMESTAMPTZ NOT NULL
+            )
+            """
+        )
     )
 
 
-def get_existing_hashes(conn, table_name, hashes):
-    """
-    Return the row hashes that already exist in a Bronze table.
-    """
-
-    if not hashes:
-        return set()
+def file_already_ingested(
+    conn,
+    file_signature: str,
+) -> bool:
 
     result = conn.execute(
         text(
-            f"""
-            SELECT _row_hash
-            FROM bronze.{table_name}
-            WHERE _row_hash = ANY(:hashes);
+            """
+            SELECT 1
+            FROM bronze._ingestion_manifest
+            WHERE file_signature = :file_signature
+            LIMIT 1
             """
         ),
-        {"hashes": list(hashes)}
+        {
+            "file_signature": file_signature,
+        },
     )
 
-    return {
-        row[0]
-        for row in result
+    return result.first() is not None
+
+
+def register_file(
+    conn,
+    file_path: Path,
+    file_signature: str,
+    domain: str,
+    batch_id: str,
+    ingested_at: datetime,
+) -> None:
+
+    conn.execute(
+        text(
+            """
+            INSERT INTO bronze._ingestion_manifest
+            (
+                source_file,
+                file_signature,
+                domain,
+                ingestion_batch_id,
+                ingested_at
+            )
+            VALUES
+            (
+                :source_file,
+                :file_signature,
+                :domain,
+                :ingestion_batch_id,
+                :ingested_at
+            )
+            """
+        ),
+        {
+            "source_file": file_path.name,
+            "file_signature": file_signature,
+            "domain": domain,
+            "ingestion_batch_id": batch_id,
+            "ingested_at": ingested_at,
+        },
+    )
+
+
+# ============================================================
+# BRONZE TABLE SUPPORT
+# ============================================================
+
+def ensure_bronze_table(
+    conn,
+    domain: str,
+) -> None:
+    """
+    Verify that the expected Bronze table exists.
+
+    Bronze tables are expected to have already been created in
+    Supabase.
+
+    We intentionally do not recreate or replace them here.
+    """
+
+    result = conn.execute(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'bronze'
+                  AND table_name = :table_name
+            )
+            """
+        ),
+        {
+            "table_name": domain,
+        },
+    )
+
+    exists = result.scalar()
+
+    if not exists:
+        raise RuntimeError(
+            f"Bronze table bronze.{domain} does not exist."
+        )
+
+
+# ============================================================
+# INGEST ONE CSV
+# ============================================================
+
+def ingest_file(
+    conn,
+    file_path: Path,
+    batch_id: str,
+    ingested_at: datetime,
+) -> int:
+    """
+    Ingest one CSV file into the appropriate Bronze table.
+
+    Every row is accepted.
+
+    No:
+        - validation
+        - cleaning
+        - deduplication
+        - rejection
+        - filtering
+    """
+
+    print()
+    print("-" * 70)
+    print(f"FILE: {file_path.name}")
+
+    # --------------------------------------------------------
+    # Read CSV exactly as strings.
+    # --------------------------------------------------------
+
+    df = pd.read_csv(
+        file_path,
+        dtype=str,
+        keep_default_na=False,
+    )
+
+    # --------------------------------------------------------
+    # Normalize only COLUMN NAMES.
+    #
+    # We do NOT clean the actual values.
+    # --------------------------------------------------------
+
+    df = normalize_dataframe_columns(df)
+
+    # Remove accidental pandas index column if present.
+    index_columns = {
+        "index",
+        "unnamed_0",
     }
 
+    columns_to_remove = [
+        column
+        for column in df.columns
+        if column in index_columns
+    ]
 
-def load_csv_to_bronze(conn, table_name, file_path, batch_id):
-    """
-    Read a CSV file and load it into bronze.<table_name>.
-
-    Bronze is append-only and historical.
-
-    Exact duplicate rows are skipped using _row_hash.
-
-    If the same business entity changes, its row hash changes,
-    so the new version is inserted and the old version remains.
-    """
-
-    if not os.path.exists(file_path):
-
-        print(
-            f"⚠️ File not found: {file_path}. "
-            f"Skipping {table_name}..."
+    if columns_to_remove:
+        df = df.drop(
+            columns=columns_to_remove
         )
 
-        return 0
+    # --------------------------------------------------------
+    # Detect domain from columns.
+    # --------------------------------------------------------
 
-    print(f"\nReading {file_path}...")
+    domain = detect_domain(set(df.columns))
 
-    df = pd.read_csv(file_path)
+    print(f"Detected domain: {domain}")
 
-    print(
-        f"Found {len(df)} records "
-        f"for bronze.{table_name}"
+    # --------------------------------------------------------
+    # Verify Bronze table.
+    # --------------------------------------------------------
+
+    ensure_bronze_table(
+        conn,
+        domain,
     )
 
-    # Prepare source data and add Bronze metadata
+    # --------------------------------------------------------
+    # Prepare dataframe.
+    #
+    # Missing columns become NULL.
+    # No row validation occurs.
+    # --------------------------------------------------------
+
     df = prepare_dataframe(
         df,
-        file_path,
-        batch_id
-    )
-    # Remove duplicate rows within the current CSV
-    before_dedup = len(df)
-
-    df = df.drop_duplicates(
-        subset="_row_hash",
-        keep="first"
-    ).reset_index(drop=True)
-
-    duplicates_removed = before_dedup - len(df)
-
-    if duplicates_removed > 0:
-        print(
-            f"Removed {duplicates_removed} duplicate row(s) "
-            f"from {os.path.basename(file_path)}."
-        )
-    # ---------------------------------------------------------
-    # FIRST INGESTION: Create Bronze table
-    # ---------------------------------------------------------
-
-    if not bronze_table_exists(conn, table_name):
-
-        print(
-            f"Bronze table bronze.{table_name} "
-            f"does not exist."
-        )
-
-        print(
-            f"Creating table and inserting "
-            f"{len(df)} records..."
-        )
-
-        df.to_sql(
-            name=table_name,
-            con=conn,
-            schema="bronze",
-            if_exists="fail",
-            index=False,
-            chunksize=1000,
-            method="multi",
-        )
-
-        # Add database-level duplicate protection
-        ensure_row_hash_constraint(
-            conn,
-            table_name
-        )
-
-        print(
-            f"✅ Created bronze.{table_name} "
-            f"and inserted {len(df)} records"
-        )
-
-        return len(df)
-
-    # ---------------------------------------------------------
-    # EXISTING TABLE: Append only new row hashes
-    # ---------------------------------------------------------
-
-    print(
-        f"Bronze table bronze.{table_name} "
-        f"already exists."
+        domain,
     )
 
-    # Make sure existing Bronze tables have the metadata columns
-    ensure_bronze_metadata_columns(
-        conn,
-        table_name
-    )
+    # --------------------------------------------------------
+    # Add technical metadata.
+    # --------------------------------------------------------
 
-    # Make sure _row_hash is protected by a UNIQUE constraint
-    ensure_row_hash_constraint(
-        conn,
-        table_name
-    )
+    df["_source_file"] = file_path.name
 
-    incoming_hashes = set(
-        df["_row_hash"]
-    )
+    df["_ingestion_batch_id"] = batch_id
 
-    existing_hashes = get_existing_hashes(
-        conn,
-        table_name,
-        incoming_hashes
-    )
+    df["_ingested_at"] = ingested_at
 
-    new_df = df[
-        ~df["_row_hash"].isin(existing_hashes)
-    ].copy()
+    # --------------------------------------------------------
+    # Insert EVERYTHING into Bronze.
+    #
+    # if_exists="append" is intentional.
+    #
+    # Bronze is append-only.
+    # --------------------------------------------------------
 
-    duplicate_count = len(df) - len(new_df)
-
-    print(
-        f"Found {duplicate_count} duplicate "
-        f"records already present in Bronze."
-    )
-
-    if new_df.empty:
-
-        print(
-            f"ℹ️ No new records to insert "
-            f"into bronze.{table_name}"
-        )
-
-        return 0
-
-    print(
-        f"Appending {len(new_df)} new records..."
-    )
-
-    new_df.to_sql(
-        name=table_name,
+    df.to_sql(
+        name=domain,
         con=conn,
         schema="bronze",
         if_exists="append",
         index=False,
-        chunksize=1000,
         method="multi",
     )
 
-    print(
-        f"✅ Appended {len(new_df)} new records "
-        f"to bronze.{table_name}"
+    row_count = len(df)
+
+    print(f"Rows loaded:    {row_count}")
+    print(f"Batch ID:       {batch_id}")
+    print("Status:         INGESTED")
+
+    return row_count
+
+
+# ============================================================
+# MAIN INGESTION PROCESS
+# ============================================================
+
+def main() -> None:
+
+    print()
+    print("=" * 70)
+    print("CSV -> BRONZE INGESTION")
+    print("=" * 70)
+
+    print()
+    print("Bronze rules:")
+    print("  - Accept every source row")
+    print("  - No row-level validation")
+    print("  - No cleaning")
+    print("  - No deduplication")
+    print("  - No rejection")
+    print("  - Bronze is append-only")
+    print()
+
+    # --------------------------------------------------------
+    # Make sure incoming directory exists.
+    # --------------------------------------------------------
+
+    INCOMING_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
-    return len(new_df)
+    # --------------------------------------------------------
+    # Find every CSV file in data/incoming.
+    # --------------------------------------------------------
 
-
-def load_external_table_to_bronze(
-    conn,
-    source_query,
-    target_bronze_table,
-    batch_id
-):
-    """
-    Load data from another database table/query
-    into the Bronze schema.
-
-    Exact duplicate rows are skipped using _row_hash.
-    """
-
-    print(
-        f"\nPulling data into "
-        f"bronze.{target_bronze_table}..."
+    csv_files = sorted(
+        [
+            path
+            for path in INCOMING_DIR.iterdir()
+            if path.is_file()
+            and path.suffix.lower() == ".csv"
+        ]
     )
 
-    df = pd.read_sql_query(
-        text(source_query),
-        conn
-    )
-
-    print(
-        f"Found {len(df)} records "
-        f"from external source."
-    )
-
-    # Prepare data and add metadata
-    df = prepare_dataframe(
-        df,
-        source_query,
-        batch_id
-    )
-
-    # If the Bronze table doesn't exist, create it
-    if not bronze_table_exists(
-        conn,
-        target_bronze_table
-    ):
+    if not csv_files:
 
         print(
-            f"bronze.{target_bronze_table} "
-            f"does not exist. Creating..."
+            f"No CSV files found in:\n"
+            f"{INCOMING_DIR}"
         )
 
-        df.to_sql(
-            name=target_bronze_table,
-            con=conn,
-            schema="bronze",
-            if_exists="fail",
-            index=False,
-            chunksize=1000,
-            method="multi",
-        )
-
-        ensure_row_hash_constraint(
-            conn,
-            target_bronze_table
-        )
-
-        print(
-            f"✅ Created bronze.{target_bronze_table} "
-            f"and inserted {len(df)} records"
-        )
-
-        return len(df)
-
-    # Existing table
-    ensure_bronze_metadata_columns(
-        conn,
-        target_bronze_table
-    )
-
-    ensure_row_hash_constraint(
-        conn,
-        target_bronze_table
-    )
-
-    incoming_hashes = set(
-        df["_row_hash"]
-    )
-
-    existing_hashes = get_existing_hashes(
-        conn,
-        target_bronze_table,
-        incoming_hashes
-    )
-
-    new_df = df[
-        ~df["_row_hash"].isin(existing_hashes)
-    ].copy()
-
-    duplicate_count = len(df) - len(new_df)
+        return
 
     print(
-        f"Found {duplicate_count} duplicate "
-        f"records already present in Bronze."
-    )
-
-    if new_df.empty:
-
-        print(
-            f"ℹ️ No new records to insert "
-            f"into bronze.{target_bronze_table}"
-        )
-
-        return 0
-
-    new_df.to_sql(
-        name=target_bronze_table,
-        con=conn,
-        schema="bronze",
-        if_exists="append",
-        index=False,
-        chunksize=1000,
-        method="multi",
+        f"Found {len(csv_files)} CSV file(s) in:"
     )
 
     print(
-        f"✅ Appended {len(new_df)} new records "
-        f"to bronze.{target_bronze_table}"
+        f"  {INCOMING_DIR}"
     )
 
-    return len(new_df)
+    # --------------------------------------------------------
+    # One batch ID for this execution.
+    # --------------------------------------------------------
 
-
-def main():
-
-    print("=" * 60)
-    print("        CSV ➔ BRONZE INGESTION PIPELINE")
-    print("=" * 60)
-
-    # One UUID identifies this complete ingestion run
     batch_id = str(uuid.uuid4())
 
-    print(f"\nIngestion batch ID: {batch_id}")
+    ingested_at = datetime.now(
+        timezone.utc
+    )
+
+    print()
+    print(f"Batch ID: {batch_id}")
+    print(
+        f"Ingestion time: "
+        f"{ingested_at.isoformat()}"
+    )
+
+    total_rows = 0
+    skipped_files = 0
+    failed_files = 0
+    successful_files = 0
+
+    # --------------------------------------------------------
+    # Database transaction.
+    # --------------------------------------------------------
 
     with engine.begin() as conn:
 
-        # 1. Ensure Bronze schema exists
-        ensure_bronze_schema(conn)
+        # Make sure manifest exists.
+        ensure_manifest_table(conn)
 
-        # 2. Ingest CSV files
-        for table_name, csv_path in CSV_MAPPING.items():
+        for file_path in csv_files:
 
-            load_csv_to_bronze(
-                conn,
-                table_name,
-                csv_path,
-                batch_id
-            )
+            try:
 
-    print("\n" + "=" * 60)
-    print("Bronze ingestion completed successfully!")
-    print("=" * 60)
+                # --------------------------------------------
+                # Check whether this exact file was already
+                # ingested.
+                # --------------------------------------------
+
+                file_signature = get_file_signature(
+                    file_path
+                )
+
+                if file_already_ingested(
+                    conn,
+                    file_signature,
+                ):
+
+                    print()
+                    print("-" * 70)
+                    print(
+                        f"FILE: {file_path.name}"
+                    )
+                    print(
+                        "Status:         SKIPPED"
+                    )
+                    print(
+                        "Reason:         "
+                        "This file was already ingested."
+                    )
+
+                    skipped_files += 1
+
+                    continue
+
+                # --------------------------------------------
+                # Ingest file.
+                # --------------------------------------------
+
+                row_count = ingest_file(
+                    conn,
+                    file_path,
+                    batch_id,
+                    ingested_at,
+                )
+
+                # --------------------------------------------
+                # Detect domain again for manifest.
+                #
+                # This only reads the CSV structure.
+                # No row validation.
+                # --------------------------------------------
+
+                manifest_df = pd.read_csv(
+                    file_path,
+                    dtype=str,
+                    keep_default_na=False,
+                    nrows=0,
+                )
+
+                manifest_df = normalize_dataframe_columns(
+                    manifest_df
+                )
+
+                domain = detect_domain(
+                    set(manifest_df.columns)
+                )
+
+                # --------------------------------------------
+                # Register successful ingestion.
+                # --------------------------------------------
+
+                register_file(
+                    conn,
+                    file_path,
+                    file_signature,
+                    domain,
+                    batch_id,
+                    ingested_at,
+                )
+
+                total_rows += row_count
+                successful_files += 1
+
+            except Exception as exc:
+
+                failed_files += 1
+
+                print()
+                print("-" * 70)
+                print(
+                    f"FILE: {file_path.name}"
+                )
+                print(
+                    "Status:         FAILED"
+                )
+                print(
+                    f"Reason:         {exc}"
+                )
+
+    # ========================================================
+    # FINAL SUMMARY
+    # ========================================================
+
+    print()
+    print("=" * 70)
+    print("BRONZE INGESTION COMPLETED")
+    print("=" * 70)
+
+    print()
+    print(f"Files found:       {len(csv_files)}")
+    print(f"Files ingested:    {successful_files}")
+    print(f"Files skipped:     {skipped_files}")
+    print(f"Files failed:      {failed_files}")
+    print(f"Rows ingested:     {total_rows}")
+
+    print()
+    print("Bronze remains append-only.")
+    print("No source rows were cleaned or rejected.")
+    print()
 
 
 if __name__ == "__main__":

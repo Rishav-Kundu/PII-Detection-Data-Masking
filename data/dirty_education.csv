@@ -1,0 +1,26 @@
+student_id,first_name,last_name,email,phone,date_of_birth,address,course,department,enrollment_date,percentage
+2001,Aarav Sharma,Sharma,aarav.edu@example.com,9876500001,15/01/2004,"12 MG Road, Kolkata",B.Tech,CSE,01/08/2022,88.5
+2002,Priya Sen,Sen,priya.edu@example.com,9876500002,22/07/2003,"45 Park Street, Kolkata",B.Tech,CSE,01/08/2022,91
+2003,Rohan Das,Das,rohan.edu.example.com,9876500003,31/02/2004,"10 Lake Road, Kolkata",B.Tech,ECE,01/08/2022,84
+2004,,Roy,meera.edu@example.com,9876500004,10/05/2003,"8 Salt Lake, Kolkata",B.Tech,IT,01/08/2022,78
+2005,Kabir Khan,Khan,kabir.edu@example.com,9876500005,03/11/2004,"22 MG Road, Mumbai",B.Tech,CSE,01/08/2022,105
+2006,Ananya Bose,Bose,ananya.edu@example.com,,14/09/2003,"15 Park Street, Kolkata",B.Tech,CSE,01/08/2022,82
+2007,Vikram Ghosh,Ghosh,vikram.edu@example.com,9876500007,2099-12-01,"7 Brigade Road, Bengaluru",B.Tech,ME,01/08/2022,75
+2008,Ishita Paul,Paul,ishita.edu@example.com,9876500008,12/12/2003,"18 Banjara Hills, Hyderabad",B.Tech,INVALID,01/08/2022,88
+2009,Arjun Roy,Roy,arjun.edu@example.com,9876500009,01/02/2002,"20 FC Road, Pune",B.Tech,CSE,01/08/2022,N/A
+2010,Neha Gupta,Gupta,neha.edu@example.com,9876500010,18/08/2002,"30 Civil Lines, Jaipur",B.Tech,CSE,31/02/2022,90
+2011,Siddharth Jain,Jain,siddharth.edu@example.com,9876500011,05/06/2003,"9 MG Road, Bengaluru",B.Tech,CSE,01/08/2022,87
+2012,Riya Mukherjee,Mukherjee,riya.edu@example.com,9876500012,,"14 Park Street, Kolkata",B.Tech,CSE,01/08/2022,89
+2013,Aman Verma,Verma,aman.edu@example.com,9876500013,11/03/2002,"5 Civil Lines, Delhi",B.Tech,CSE,,76
+2014,Tanya Singh,Singh,tanya.edu@example.com,9876500014,01/01/2004,"11 MG Road, Pune",B.Tech,CSE,01/08/2022,-10
+2015,Dev Patel,Patel,dev.edu@example.com,9876500015,31/12/2003,"9 CG Road, Ahmedabad",B.Tech,CSE,01/08/2022,93
+2015,Dev Patel,Patel,dev.edu@example.com,9876500015,31/12/2003,"9 CG Road, Ahmedabad",B.Tech,CSE,01/08/2022,93
+2017,Sara Ali,Ali,sara.edu@example.com,9876500017,15/10/2003,"21 Residency Road, Bengaluru",B.Tech,CSE,01/08/2022,81
+2018,Rahul Nair,Nair,rahul.edu@example.com,9876500018,25/12/2002,"3 MG Road, Bengaluru",B.Tech,CSE,01/08/2022,79
+2019,Pooja Iyer,Iyer,pooja.edu@example.com,9876500019,08/02/2003,"6 Anna Salai, Chennai",B.Tech,CSE,01/08/2022,85
+2020,Karan Malhotra,Malhotra,karan.edu@example.com,9876500020,17/07/2002,"9 Sector 17, Chandigarh",B.Tech,CSE,01/08/2022,88
+2021,Nisha Kapoor,Kapoor,nisha.edu@example.com,9876500021,12/11/2003,"4 Connaught Place, Delhi",B.Tech,CSE,01/08/2022,90
+2022,Vivek Rao,Rao,vivek.edu@example.com,9876500022,09/09/2004,"2 Banjara Hills, Hyderabad",B.Tech,CSE,01/08/2022,83
+2023,Maya Roy,Roy,maya.edu@example.com,9876500023,06/06/2003,"17 Park Street, Kolkata",B.Tech,CSE,01/08/2022,92
+2024,Aditi Sen,Sen,aditi.edu@example.com,9876500024,20/02/2002,"13 MG Road, Kolkata",B.Tech,CSE,01/08/2022,86
+2025,Arjun Roy,Roy,arjun.edu@example.com,9876500009,01/02/2002,"20 FC Road, Pune",B.Tech,CSE,01/08/2022,84

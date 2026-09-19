@@ -1,0 +1,26 @@
+customer_id,first_name,last_name,email,phone,address,age,gender,campaign_name,campaign_date,channel
+4001,Aarav Sharma,Sharma,aarav.mkt@example.com,9876300001,"12 MG Road, Kolkata",25,MALE,Summer Sale,10/06/2025,EMAIL
+4002,Priya Sen,Sen,priya.mkt@example.com,9876300002,"45 Park Street, Kolkata",27,FEMALE,Festive Offer,11/06/2025,SMS
+4003,Rohan Das,Das,rohan.mkt.example.com,9876300003,"10 Lake Road, Kolkata",26,MALE,Summer Sale,12/06/2025,EMAIL
+4004,,Roy,meera.mkt@example.com,9876300004,"8 Salt Lake, Kolkata",28,FEMALE,New User,13/06/2025,SOCIAL
+4005,Kabir Khan,Khan,kabir.mkt@example.com,9876300005,"22 MG Road, Mumbai",-5,MALE,Clearance,14/06/2025,EMAIL
+4006,Ananya Bose,Bose,ananya.mkt@example.com,,"15 Park Street, Kolkata",29,FEMALE,Summer Sale,15/06/2025,SMS
+4007,Vikram Ghosh,Ghosh,vikram.mkt@example.com,9876300007,"7 Brigade Road, Bengaluru",200,MALE,Summer Sale,16/06/2025,EMAIL
+4008,Ishita Paul,Paul,ishita.mkt@example.com,9876300008,"18 Banjara Hills, Hyderabad",24,UNKNOWN,Festive Offer,17/06/2025,SOCIAL
+4009,Arjun Roy,Roy,arjun.mkt@example.com,9876300009,"20 FC Road, Pune",thirty,MALE,New User,18/06/2025,EMAIL
+4010,Neha Gupta,Gupta,neha.mkt@example.com,9876300010,"30 Civil Lines, Jaipur",,FEMALE,Clearance,19/06/2025,EMAIL
+4011,Siddharth Jain,Jain,siddharth.mkt@example.com,9876300011,"9 MG Road, Bengaluru",31,MALE,Summer Sale,20/06/2025,FAX
+4012,Riya Mukherjee,Mukherjee,riya.mkt@example.com,9876300012,,32,FEMALE,Festive Offer,21/06/2025,SMS
+4013,Aman Verma,Verma,aman.mkt@example.com,9876300013,"5 Civil Lines, Delhi",33,MALE,New User,32/06/2025,EMAIL
+4014,Tanya Singh,Singh,tanya.mkt@example.com,9876300014,"11 MG Road, Pune",34,FEMALE,Clearance,,EMAIL
+4015,Dev Patel,Patel,dev.mkt@example.com,9876300015,"9 CG Road, Ahmedabad",35,MALE,Summer Sale,24/06/2025,EMAIL
+4015,Dev Patel,Patel,dev.mkt@example.com,9876300015,"9 CG Road, Ahmedabad",35,MALE,Summer Sale,24/06/2025,EMAIL
+4017,Sara Ali,Ali,sara.mkt@example.com,9876300017,"21 Residency Road, Bengaluru",36,FEMALE,Festive Offer,26/06/2025,SOCIAL
+4018,Rahul Nair,Nair,rahul.mkt@example.com,9876300018,"3 MG Road, Bengaluru",37,MALE,New User,27/06/2025,EMAIL
+4019,Pooja Iyer,Iyer,pooja.mkt@example.com,9876300019,"6 Anna Salai, Chennai",38,FEMALE,Clearance,28/06/2025,SMS
+4020,Karan Malhotra,Malhotra,karan.mkt@example.com,9876300020,"9 Sector 17, Chandigarh",39,MALE,Summer Sale,29/06/2025,EMAIL
+4021,Nisha Kapoor,Kapoor,nisha.mkt@example.com,9876300021,"4 Connaught Place, Delhi",40,FEMALE,Festive Offer,30/06/2025,SOCIAL
+4022,Vivek Rao,Rao,vivek.mkt@example.com,9876300022,"2 Banjara Hills, Hyderabad",41,MALE,Summer Sale,01/07/2025,EMAIL
+4023,Maya Roy,Roy,maya.mkt@example.com,9876300023,"17 Park Street, Kolkata",42,FEMALE,Clearance,02/07/2025,SMS
+4024,Aditi Sen,Sen,aditi.mkt@example.com,9876300024,"13 MG Road, Kolkata",43,FEMALE,Festive Offer,03/07/2025,EMAIL
+4025,Aditi Sen,Sen,aditi.mkt@example.com,9876300024,"13 MG Road, Kolkata",43,FEMALE,Festive Offer,03/07/2025,EMAIL
