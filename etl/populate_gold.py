@@ -140,11 +140,22 @@ engine = create_engine(
 # ============================================================
 
 def load_model_bundle() -> dict[str, Any]:
+    metadata_file = MODEL_DIR / "metadata.json"
+    if not metadata_file.exists():
+        raise FileNotFoundError(f"Missing metadata.json in {MODEL_DIR}")
+
+    metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
+
+    has_dnn = (MODEL_DIR / "pii_dnn_softmax.keras").exists()
+    has_clf = (MODEL_DIR / "classifier.joblib").exists()
+    if not has_dnn and not has_clf:
+        raise FileNotFoundError(
+            f"Neither pii_dnn_softmax.keras nor classifier.joblib found in {MODEL_DIR}"
+        )
+
     required = [
-        MODEL_DIR / "classifier.joblib",
         MODEL_DIR / "label_encoder.joblib",
         MODEL_DIR / "extra_scaler.joblib",
-        MODEL_DIR / "metadata.json",
         MODEL_DIR / "embedding_model",
     ]
 
@@ -157,7 +168,25 @@ def load_model_bundle() -> dict[str, Any]:
 
     print(f"Loading PII classifier from: {MODEL_DIR}")
 
-    classifier = joblib.load(MODEL_DIR / "classifier.joblib")
+    if has_dnn and metadata.get("framework") == "tensorflow.keras":
+        import tensorflow as tf
+        keras_model = tf.keras.models.load_model(str(MODEL_DIR / "pii_dnn_softmax.keras"))
+
+        class KerasClassifierAdapter:
+            def __init__(self, model):
+                self.model = model
+            def predict(self, X):
+                probs = self.predict_proba(X)
+                return np.argmax(probs, axis=1)
+            def predict_proba(self, X):
+                return self.model.predict(np.asarray(X, dtype=np.float32), batch_size=32, verbose=0)
+
+        classifier = KerasClassifierAdapter(keras_model)
+        print("  Classifier type: Deep Neural Network (Keras Softmax)")
+    else:
+        classifier = joblib.load(MODEL_DIR / "classifier.joblib")
+        print("  Classifier type: Logistic Regression (scikit-learn)")
+
     label_encoder = joblib.load(MODEL_DIR / "label_encoder.joblib")
     extra_scaler = joblib.load(MODEL_DIR / "extra_scaler.joblib")
 
@@ -842,6 +871,46 @@ def count_records(
     return int(result["count"])
 
 
+def count_non_null_records(
+    schema_name: str,
+    table_name: str,
+    column_name: str,
+) -> int:
+    """Count actual non-NULL values in the column.
+
+    The column has already been validated through information_schema,
+    so the identifier can safely be used in the quoted dynamic query.
+    """
+    exists = fetch_one(
+        """
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = :schema_name
+          AND table_name = :table_name
+          AND column_name = :column_name
+        """,
+        {
+            "schema_name": schema_name,
+            "table_name": table_name,
+            "column_name": column_name,
+        },
+    )
+
+    if exists is None:
+        raise ValueError(
+            f"Column does not exist: {schema_name}.{table_name}.{column_name}"
+        )
+
+    query = f"""
+        SELECT COUNT(*) AS count
+        FROM {quote_identifier(schema_name)}.{quote_identifier(table_name)}
+        WHERE {quote_identifier(column_name)} IS NOT NULL
+    """
+
+    result = fetch_one(query)
+    return int(result["count"])
+
+
 # ============================================================
 # 9. BUILD THE EXACT BGE INPUT
 # ============================================================
@@ -1007,51 +1076,50 @@ def classify_column(
 
     #DEBUG STATUS CODE:
 
+    # print("\n========== CLASSIFIER DEBUG ==========")
+    # print("semantic_text:")
+    # print(semantic_text)
 
-    print("\n========== CLASSIFIER DEBUG ==========")
-    print("semantic_text:")
-    print(semantic_text)
+    # print("\npattern_features:")
+    # print(pattern_features)
 
-    print("\npattern_features:")
-    print(pattern_features)
+    # print("\nname_features:")
+    # print(name_features)
 
-    print("\nname_features:")
-    print(name_features)
+    # print("\nmetadata_features:")
+    # print(metadata_features)
 
-    print("\nmetadata_features:")
-    print(metadata_features)
+    # print("\nembedding:")
+    # print(
+    #     "shape =", embedding.shape,
+    #     "mean =", embedding.mean(),
+    #     "std =", embedding.std()
+    # )
 
-    print("\nembedding:")
-    print(
-        "shape =", embedding.shape,
-        "mean =", embedding.mean(),
-        "std =", embedding.std()
-    )
+    # print("\nextra:")
+    # print(
+    #     "shape =", extra_features.shape,
+    #     "mean =", extra_features.mean(),
+    #     "std =", extra_features.std()
+    # )
 
-    print("\nextra:")
-    print(
-        "shape =", extra_features.shape,
-        "mean =", extra_features.mean(),
-        "std =", extra_features.std()
-    )
+    # print("\nX:")
+    # print(
+    #     "shape =", X.shape,
+    #     "mean =", X.mean(),
+    #     "std =", X.std()
+    # )
 
-    print("\nX:")
-    print(
-        "shape =", X.shape,
-        "mean =", X.mean(),
-        "std =", X.std()
-    )
+    # print("\nMODEL:")
+    # print("classifier classes =", CLASSIFIER.classes_)
+    # print("encoder classes    =", LABEL_ENCODER.classes_)
 
-    print("\nMODEL:")
-    print("classifier classes =", CLASSIFIER.classes_)
-    print("encoder classes    =", LABEL_ENCODER.classes_)
+    # print("\nPROBABILITIES:")
+    # print(CLASSIFIER.predict_proba(X)[0])
 
-    print("\nPROBABILITIES:")
-    print(CLASSIFIER.predict_proba(X)[0])
-
-    print("predicted encoded =", predicted_encoded)
-    print("predicted label   =", predicted_label)
-    print("======================================")
+    # print("predicted encoded =", predicted_encoded)
+    # print("predicted label   =", predicted_label)
+    # print("======================================")
 
 
 
@@ -1138,15 +1206,22 @@ def insert_pii_scan(
     keys: dict[str, Any],
     prediction: dict[str, Any],
     records_scanned: int,
+    non_null_records: int,
 ):
     """
     Insert the column-level scan result.
 
-    pii_records_detected is intentionally NULL in this first
-    implementation because the classifier is a COLUMN-LEVEL
-    classifier, not a row-level PII detector. We must not claim
-    an exact row count that the model did not calculate.
+    The classifier predicts whether the COLUMN is PII, not each row.
+    Therefore, when a column is predicted as PII, every non-NULL value
+    in that column is counted as a detected PII record. For a NON_PII
+    column, the detected count is 0.
+
+    This is a column-level PII count, not a row-level ML prediction.
     """
+
+    pii_records_detected = (
+        non_null_records if prediction["pii_detected"] else 0
+    )
 
     today = date.today()
     date_key = int(today.strftime("%Y%m%d"))
@@ -1187,7 +1262,7 @@ def insert_pii_scan(
             FALSE,
             NULL,
             :records_scanned,
-            NULL
+            :pii_records_detected
         )
         """,
         {
@@ -1202,6 +1277,7 @@ def insert_pii_scan(
             "final_confidence": prediction["final_confidence"],
             "model_version": MODEL_VERSION,
             "records_scanned": records_scanned,
+            "pii_records_detected": pii_records_detected,
         },
     )
 
@@ -1246,6 +1322,12 @@ def run_pii_scan():
                 table_name=table_name,
             )
 
+            non_null_records = count_non_null_records(
+                schema_name=schema_name,
+                table_name=table_name,
+                column_name=column_name,
+            )
+
             prediction = classify_column(
                 column=column,
                 sample_values=samples,
@@ -1262,6 +1344,11 @@ def run_pii_scan():
                 keys=keys,
                 prediction=prediction,
                 records_scanned=records_scanned,
+                non_null_records=non_null_records,
+            )
+
+            pii_records_detected = (
+                non_null_records if prediction["pii_detected"] else 0
             )
 
             print(
@@ -1269,6 +1356,7 @@ def run_pii_scan():
                 f" | detected={prediction['pii_detected']}"
                 f" | confidence={prediction['final_confidence']:.4f}"
                 f" | rows={records_scanned}"
+                f" | pii_rows={pii_records_detected}"
             )
 
             successful += 1
